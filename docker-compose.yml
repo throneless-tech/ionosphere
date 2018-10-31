@@ -1,0 +1,17 @@
+version: "3"
+services:
+  ionosphere_hubot:
+    image: chambana/hubot
+    container_name: ionosphere_hubot
+    env_file:
+      - .env
+    links:
+      - ionosphere_redis:redis
+  ionosphere_redis:
+    image: redis
+    container_name: ionosphere_redis
+    volumes:
+      - redis_data:/data
+volumes:
+  redis_data: {}
+
