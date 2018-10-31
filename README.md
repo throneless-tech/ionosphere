@@ -41,9 +41,12 @@ yo hubot
 * `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
 * `REDIS_URL`: A URL for connecting to your Redis instance. See [here](https://www.npmjs.com/package/hubot-redis-brain) for valid values for `REDIS_URL`.
 **NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
+
 `NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_SIGNAL_PASSWORD=<password> HUBOT_LIST_ADMINS=+15555556666 node ./bin/hubot -a signal-service`
+
 5. When you first start the bot with the above parameters, it will have the Signal server send you a numeric code via SMS at the number you specified, and then exit. On the next startup, in addition to the above parameters:
 * `HUBOT_SIGNAL_CODE`: This is the code you receive via SMS at the number above (without the dash/hyphen). When you start up the bot for the second time with this code, it will authenticate that you have control over the number and Hubot will respond to Signal messages sent to the number above. The `HUBOT_SIGNAL_CODE` parameter will be ignored on subsequent startups and can be ommitted thereafter.
+
 `NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_SIGNAL_PASSWORD=<password> HUBOT_SIGNAL_CODE=<code> HUBOT_LIST_ADMINS=+15555556666 node ./bin/hubot -a signal-service`
 ### Docker
 1. This repository provides a sample `docker-compose.yml` file for use with `docker-compose`. Install `docker-compose`, and then create a `.env` file in the same directory with the following configuration options, one per line in `KEY=VALUE` form:
@@ -66,9 +69,13 @@ This assumes that you have the Heroku CLI installed and that you have set up a H
 * `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
 **NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
 3. Before pushing your repository to Heroku, install Redis into your Heroku instance:
+
 `heroku addons:create rediscloud`
+
 4. Continue with the tutorial and push the repository to Heroku. Hubot will exit at first, but will send an SMS message with an authentication code to the number you specified. Add that code (sans hyphen) to your Heroku environment:
+
 `heroku config:set HUBOT_SIGNAL_CODE=<code>`
+
 5. Hubot should pick up the code and complete registration with the Signal server on its next restart. If necessary, you can restart the dyno manually.
 
 ### Usage
@@ -87,9 +94,13 @@ list membership <number> - list lists that name is in
 **NOTE:** Hubot's text processing doesn't like `+` signs, so when adding a number you should use the same [E.164 format](https://en.wikipedia.org/wiki/E.164) as specified above, but omit the leading `+`.
 
 To send a message to a list you've created, simply send a message to the bot as below:
+
 `@<listname> <message>`
+
 So for instance, in order to send the message "Hello world!" to the list "notifications", message the bot:
+
 `@notifications Hello world!`
+
 And every number you added to the notifications list will receive the message "Hello world!" coming from the bot's phone number.
 
 ## License
