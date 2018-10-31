@@ -32,14 +32,27 @@ yo hubot
   "hubot-diagnostics",
   "hubot-help",
   "hubot-redis-brain",
-  "hubot-list"
+  "@throneless/hubot-list"
 ]
 ```
 4. Hubot is primarily configured through environment variables. With the hubot-signal-service adapter and the `external-scripts.json` above, you will need to specify the following environment variables:
 * `HUBOT_SIGNAL_NUMBER`: This is the phone number that this Hubot instance will listen on in [E.164 format](https://en.wikipedia.org/wiki/E.164), i.e. a US phone number would look like `+15555555555`.
 * `HUBOT_SIGNAL_PASSWORD`: This is an arbitrary password string, but it must be the same between initializations.
 * `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
+* `REDIS_URL`: A URL for connecting to your Redis instance. See [here](https://www.npmjs.com/package/hubot-redis-brain) for valid values for `REDIS_URL`.
 **NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
 `NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_SIGNAL_PASSWORD=<password> HUBOT_LIST_ADMINS=+15555556666 node ./bin/hubot -a signal-service`
-When you first start the bot with the above parameters, it will have the Signal server send you a numeric code via SMS at the number you specified, and then exit. On the next startup, in addition to the above parameters:
+5. When you first start the bot with the above parameters, it will have the Signal server send you a numeric code via SMS at the number you specified, and then exit. On the next startup, in addition to the above parameters:
 * `HUBOT_SIGNAL_CODE`: This is the code you receive via SMS at the number above (without the dash/hyphen). When you start up the bot for the second time with this code, it will authenticate that you have control over the number and Hubot will respond to Signal messages sent to the number above. The `HUBOT_SIGNAL_CODE` parameter will be ignored on subsequent startups and can be ommitted thereafter.
+`NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_SIGNAL_PASSWORD=<password> HUBOT_SIGNAL_CODE=<code> HUBOT_LIST_ADMINS=+15555556666 node ./bin/hubot -a signal-service`
+### Docker
+1. This repository provides a sample `docker-compose.yml` file for use with `docker-compose`. Install `docker-compose`, and then create a `.env` file in the same directory with the following configuration options, one per line in `KEY=VALUE` form:
+* `HUBOT_SIGNAL_NUMBER`: This is the phone number that this Hubot instance will listen on in [E.164 format](https://en.wikipedia.org/wiki/E.164), i.e. a US phone number would look like `+15555555555`.
+* `HUBOT_SIGNAL_PASSWORD`: This is an arbitrary password string, but it must be the same between initializations.
+* `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
+* `HUBOT_ADAPTER`: The adapter to use with Hubot. For the purposes of this tutorial, we're using `hubot-signal-service`.
+* `HUBOT_EXTERNAL_SCRIPTS`: A comma-separated list of Hubot scripts to load with the bot. This should **not** include hubot-signal-service. For the purposes of this tutorial, we are using `hubot-help,hubot-diagnostics,hubot-redis-brain,@throneless/hubot-list`.
+* `REDIS_URL`: A URL for connecting to your Redis instance. This Docker configuration includes a Redis container, so we can use `redis://redis:6379`.
+* `HUBOT_NAME`: The name you would like for the bot. For example, `hubot` or `ionosphere`.
+2. After filling out the `.env` file in the same directory as the provided `docker-compose.yml` file, run `docker-compose up` from the same directory. It will download and install the necessary Docker containers, and run them.
+3. On first run, Hubot will exit with a message that it has sent an authentication code to the number you specified. If necessary hit `CTRL^c` to regain controll of the shell and add the variable `HUBOT_SIGNAL_CODE` to the `.env` file, set to the code you received via SMS (sans the hyphen). Run `docker-compose up` again, and it will reload Hubot and complete the registration process. If you wish, you may run `docker-compose up -d` instead to run it in the background.
