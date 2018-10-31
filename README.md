@@ -54,5 +54,45 @@ yo hubot
 * `HUBOT_EXTERNAL_SCRIPTS`: A comma-separated list of Hubot scripts to load with the bot. This should **not** include hubot-signal-service. For the purposes of this tutorial, we are using `hubot-help,hubot-diagnostics,hubot-redis-brain,@throneless/hubot-list`.
 * `REDIS_URL`: A URL for connecting to your Redis instance. This Docker configuration includes a Redis container, so we can use `redis://redis:6379`.
 * `HUBOT_NAME`: The name you would like for the bot. For example, `hubot` or `ionosphere`.
+**NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
 2. After filling out the `.env` file in the same directory as the provided `docker-compose.yml` file, run `docker-compose up` from the same directory. It will download and install the necessary Docker containers, and run them.
 3. On first run, Hubot will exit with a message that it has sent an authentication code to the number you specified. If necessary hit `CTRL^c` to regain controll of the shell and add the variable `HUBOT_SIGNAL_CODE` to the `.env` file, set to the code you received via SMS (sans the hyphen). Run `docker-compose up` again, and it will reload Hubot and complete the registration process. If you wish, you may run `docker-compose up -d` instead to run it in the background.
+### Heroku
+This assumes that you have the Heroku CLI installed and that you have set up a Heroku account. **NOTE:** The Heroku free plan will not keep Hubot awake 24/7. You can partially work around that by including the hubot-heroku-keepalive script (instructions [here](https://github.com/hubot-scripts/hubot-heroku-keepalive)) or by upgrading to a paid tier.
+1. Follow steps 1 - 3 of the standalone installation instructions above.
+2. Follow the instructions here: https://hubot.github.com/docs/deploying/heroku/. When you get to the part about setting environment variables, instead of the examples given, set the following environment variables in Heroku:
+* `HUBOT_SIGNAL_NUMBER`: This is the phone number that this Hubot instance will listen on in [E.164 format](https://en.wikipedia.org/wiki/E.164), i.e. a US phone number would look like `+15555555555`.
+* `HUBOT_SIGNAL_PASSWORD`: This is an arbitrary password string, but it must be the same between initializations.
+* `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
+**NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
+3. Before pushing your repository to Heroku, install Redis into your Heroku instance:
+`heroku addons:create rediscloud`
+4. Continue with the tutorial and push the repository to Heroku. Hubot will exit at first, but will send an SMS message with an authentication code to the number you specified. Add that code (sans hyphen) to your Heroku environment:
+`heroku config:set HUBOT_SIGNAL_CODE=<code>`
+5. Hubot should pick up the code and complete registration with the Signal server on its next restart. If necessary, you can restart the dyno manually.
+
+### Usage
+From another Signal device, add the bot's number to your contacts. You may need to back out of and re-open Signal, but when you open a compose window to write a message to that contact it should have a blue 'send' button, indicating the messages are going over Signal's encrypted messaging service. The bot can be loaded with any available Hubot script, but the distribution lists outlined in this example project use the following commands (only available when requested via a number specified in `HUBOT_LIST_ADMINS` above):
+```
+list lists - list all list names
+list dump - list all list names and members
+list create <list> - create a new list
+list destroy <list> - destroy a list
+list rename <old> <new> - rename a list
+list add <list> <number> - add a number to a list
+list remove <list> <number> - remove a number from a list
+list info <list> - list members in list
+list membership <number> - list lists that name is in
+```
+**NOTE:** Hubot's text processing doesn't like `+` signs, so when adding a number you should use the same [E.164 format](https://en.wikipedia.org/wiki/E.164) as specified above, but omit the leading `+`.
+
+To send a message to a list you've created, simply send a message to the bot as below:
+`@<listname> <message>`
+So for instance, in order to send the message "Hello world!" to the list "notifications", message the bot:
+`@notifications Hello world!`
+And every number you added to the notifications list will receive the message "Hello world!" coming from the bot's phone number.
+
+## License
+[<img src="https://www.gnu.org/graphics/agplv3-155x51.png" alt="AGPLv3" >](http://www.gnu.org/licenses/agpl-3.0.html)
+
+Ionosphere is a free software project licensed under the GNU Affero General Public License v3.0 (AGPLv3) by [Throneless Tech](https://throneless.tech).
