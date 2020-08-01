@@ -11,14 +11,17 @@ This project uses [Hubot](https://hubot.github.com) and a few extensions for it:
 * **[hubot-signal-service](https://github.com/throneless-tech/hubot-signal)**, a Hubot adapter for connecting to the Signal network that utilizes the library above. It can be found on NPM [here](https://www.npmjs.com/package/hubot-signal-service).
 * **[hubot-list](https://github.com/throneless-tech/hubot-list)**, a simple Hubot script for providing a basic distribution list functionality. It can be found on NPM [here](https://npmjs.com/package/@throneless/hubot-list).
 
+Optionally, there is also:
+* **[hubot-token](https://github.com/throneless-tech/hubot-token)**, a Hubot script for managing collections of tokens (arbitrary strings) and distributing them to lists of users. This is has special functionality for distributing prepaid VPN codes, but can be used for any kind of secrets. It can be found on NPM [here](https://npmjs.com/package/@throneless/hubot-token).
+
 Additionally, the Docker installation uses the following custom container:
 * **[chambana/hubot](https://github.com/chambana-net/docker-hubot)**, which provides automatic installation and configuration of a modern version of Hubot. It's available on the Docker Hub [here](https://hub.docker.com/r/chambana/hubot/).
 
 ## Installation
 In order to create a functioning bot that connects to the Signal network, it is necessary to have a phone number associated with the bot for authentication purposes. This can be a real phone, a [Google Voice](https://voice.google.com) number, a [Twilio](https://twilio.com) number, or any other number where you can receive an SMS message. It is not currently recommended to associate the bot with a number that you also intend for normal Signal use, as you will most likely clobber your keys. Technically after you authenticate the bot you no longer need the number, but you may want to retain it so that someone else can't start using it.
 ### Standalone
-These instructions were tested using [NodeJS](https://nodejs.org) v8.12.0. Some of the components are only compatible with Hubot v3.x and above. Hubot uses a persistant storage backend called the "Brain." For many adapters, having a persistent brain is not necessary, but for hubot-signal-service it is mandatory so that it can store keying information. Any available hubot-brain should work; the most commonly used is [hubot-redis-brain](https://www.npmjs.com/package/hubot-redis-brain), but installing standalone [Redis](https://redis.io) is outside the scope of these instructions.
-1. The recommended way to install Hubot is to use [generator-hubot](https://www.npmjs.com/package/generator-hubot), a [Yeoman](https://yeoman.io) generator. As of 31-Oct-2018, the `latest` tag has not been updated to point at a version that installs Hubot v3.x or above, so it is necessary to install it with an explicit version:
+These instructions were tested using [NodeJS](https://nodejs.org) v8.12.0 and later. Some of the components are only compatible with Hubot v3.x and above. Hubot uses a persistant storage backend called the "Brain." For many adapters, having a persistent brain is not necessary, but for hubot-signal-service it is mandatory so that it can store keying information. Any available hubot-brain should work; the most commonly used is [hubot-redis-brain](https://www.npmjs.com/package/hubot-redis-brain), but installing standalone [Redis](https://redis.io) is outside the scope of these instructions.
+1. The recommended way to install Hubot is to use [generator-hubot](https://www.npmjs.com/package/generator-hubot), a [Yeoman](https://yeoman.io) generator. As of 01-Aug-2020, the `latest` tag has not been updated to point at a version that installs Hubot v3.x or above, so it is necessary to install it with an explicit version:
 `npm install -g yo generator-hubot@1.1.0`
 2. Create a directory for the bot, and then run generator inside and answer the prompts. When it asks you for the adapter, enter `signal-service`:
 ```
@@ -37,26 +40,32 @@ yo hubot
 ```
 4. Hubot is primarily configured through environment variables. With the hubot-signal-service adapter and the `external-scripts.json` above, you will need to specify the following environment variables:
 * `HUBOT_SIGNAL_NUMBER`: This is the phone number that this Hubot instance will listen on in [E.164 format](https://en.wikipedia.org/wiki/E.164), i.e. a US phone number would look like `+15555555555`.
-* `HUBOT_SIGNAL_PASSWORD`: This is an arbitrary password string, but it must be the same between initializations.
 * `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
 * `REDIS_URL`: A URL for connecting to your Redis instance. See [here](https://www.npmjs.com/package/hubot-redis-brain) for valid values for `REDIS_URL`.
+And if you're using *hubot-token*:
+* `HUBOT_SIGNAL_DOWNLOADS`: *hubot-token* can receive CSV files to populate its list of tokens. If you are using that or any other Hubot script that uses attachments, you should set this to a temporary directory where attachment files can be stored for processing.
+* `HUBOT_LIST_AUTH`: Set this to true if using *hubot-token*, as it makes *hubot-list* expose a internal authentication API compatible with the commonly used *hubot-auth* script.
+
 **NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
 
-`NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_SIGNAL_PASSWORD=<password> HUBOT_LIST_ADMINS=+15555556666 node ./bin/hubot -a signal-service`
+`NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_LIST_ADMINS=+15555556666 HUBOT_LIST_AUTH=true HUBOT_SIGNAL_DOWNLOADS=/tmp ./bin/hubot -a signal-service`
 
 5. When you first start the bot with the above parameters, it will have the Signal server send you a numeric code via SMS at the number you specified, and then exit. On the next startup, in addition to the above parameters:
 * `HUBOT_SIGNAL_CODE`: This is the code you receive via SMS at the number above (without the dash/hyphen). When you start up the bot for the second time with this code, it will authenticate that you have control over the number and Hubot will respond to Signal messages sent to the number above. The `HUBOT_SIGNAL_CODE` parameter will be ignored on subsequent startups and can be ommitted thereafter.
 
-`NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_SIGNAL_PASSWORD=<password> HUBOT_SIGNAL_CODE=<code> HUBOT_LIST_ADMINS=+15555556666 node ./bin/hubot -a signal-service`
+`NODE_ENV=production HUBOT_SIGNAL_NUMBER=+15555555555 HUBOT_SIGNAL_CODE=<code> HUBOT_LIST_ADMINS=+15555556666 HUBOT_LIST_AUTH=true HUBOT_SIGNAL_DOWNLOADS=/tmp ./bin/hubot -a signal-service`
 ### Docker
 1. This repository provides a sample `docker-compose.yml` file for use with `docker-compose`. Install `docker-compose`, and then create a `.env` file in the same directory with the following configuration options, one per line in `KEY=VALUE` form:
 * `HUBOT_SIGNAL_NUMBER`: This is the phone number that this Hubot instance will listen on in [E.164 format](https://en.wikipedia.org/wiki/E.164), i.e. a US phone number would look like `+15555555555`.
-* `HUBOT_SIGNAL_PASSWORD`: This is an arbitrary password string, but it must be the same between initializations.
 * `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
 * `HUBOT_ADAPTER`: The adapter to use with Hubot. For the purposes of this tutorial, we're using `hubot-signal-service`.
 * `HUBOT_EXTERNAL_SCRIPTS`: A comma-separated list of Hubot scripts to load with the bot. This should **not** include hubot-signal-service. For the purposes of this tutorial, we are using `hubot-help,hubot-diagnostics,hubot-redis-brain,@throneless/hubot-list`.
 * `REDIS_URL`: A URL for connecting to your Redis instance. This Docker configuration includes a Redis container, so we can use `redis://redis:6379`.
 * `HUBOT_NAME`: The name you would like for the bot. For example, `hubot` or `ionosphere`.
+And if you're using *hubot-token*:
+* `HUBOT_SIGNAL_DOWNLOADS`: *hubot-token* can receive CSV files to populate its list of tokens. If you are using that or any other Hubot script that uses attachments, you should set this to a temporary directory where attachment files can be stored for processing.
+* `HUBOT_LIST_AUTH`: Set this to true if using *hubot-token*, as it makes *hubot-list* expose a internal authentication API compatible with the commonly used *hubot-auth* script.
+
 **NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
 2. After filling out the `.env` file in the same directory as the provided `docker-compose.yml` file, run `docker-compose up` from the same directory. It will download and install the necessary Docker containers, and run them.
 3. On first run, Hubot will exit with a message that it has sent an authentication code to the number you specified. If necessary hit `CTRL^c` to regain controll of the shell and add the variable `HUBOT_SIGNAL_CODE` to the `.env` file, set to the code you received via SMS (sans the hyphen). Run `docker-compose up` again, and it will reload Hubot and complete the registration process. If you wish, you may run `docker-compose up -d` instead to run it in the background.
@@ -65,8 +74,11 @@ This assumes that you have the Heroku CLI installed and that you have set up a H
 1. Follow steps 1 - 3 of the standalone installation instructions above.
 2. Follow the instructions here: https://hubot.github.com/docs/deploying/heroku/. When you get to the part about setting environment variables, instead of the examples given, set the following environment variables in Heroku:
 * `HUBOT_SIGNAL_NUMBER`: This is the phone number that this Hubot instance will listen on in [E.164 format](https://en.wikipedia.org/wiki/E.164), i.e. a US phone number would look like `+15555555555`.
-* `HUBOT_SIGNAL_PASSWORD`: This is an arbitrary password string, but it must be the same between initializations.
 * `HUBOT_LIST_ADMINS`: This is a comma-separate list of phone numbers that are allowed to create, manage, and send to the distribution lists provided by hubot-list.
+And if you're using *hubot-token*:
+* `HUBOT_SIGNAL_DOWNLOADS`: *hubot-token* can receive CSV files to populate its list of tokens. If you are using that or any other Hubot script that uses attachments, you should set this to a temporary directory where attachment files can be stored for processing.
+* `HUBOT_LIST_AUTH`: Set this to true if using *hubot-token*, as it makes *hubot-list* expose a internal authentication API compatible with the commonly used *hubot-auth* script.
+
 **NOTE:** Additionally, hubot-signal-service connects to the Signal staging server rather than the production server by default. This is suitable for testing, but you won't be able to send to or receive messages from the bot using standard clients. To connect to the live server, you must also pass the variable `NODE_ENV=production`.
 3. Before pushing your repository to Heroku, install Redis into your Heroku instance:
 
@@ -91,7 +103,6 @@ list remove <list> <number> - remove a number from a list
 list info <list> - list members in list
 list membership <number> - list lists that name is in
 ```
-**NOTE:** Hubot's text processing doesn't like `+` signs, so when adding a number you should use the same [E.164 format](https://en.wikipedia.org/wiki/E.164) as specified above, but omit the leading `+`.
 
 To send a message to a list you've created, simply send a message to the bot as below:
 
